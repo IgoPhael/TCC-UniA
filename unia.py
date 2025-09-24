@@ -8,22 +8,105 @@ import faiss
 from dotenv import load_dotenv
 from threading import Thread
 
-from langchain.text_splitter import TokenTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
 from PyPDF2 import PdfReader
 from sentence_transformers import SentenceTransformer
 
+# Estilos customizados
+st.markdown("""
+    <style>
+    /* ESTILO GLOBAL UTFPR */
+    html, body, [class*="css"]  {
+        font-family: Roboto;
+    }
+    
+    /* FUNDO */
+    .stApp {
+        background-color: #ffffff; /* Branco */
+        color: #000000;           /* Preto */
+    }
+    .stApp p{
+        color: #000000;           /* Preto */
+    }
+    
+    [data-testid="stHeader"] {
+        background-color: #FFFFFF !important; /* Branco */
+        color: #000000 !important;             /* Preto */
+    }
+
+    [data-testid="stFooter"] {
+        background-color: #FFFFFF !important; /* Branco */
+        color: #000000 !important;             /* Preto */
+    }
+    
+    .st-bf {
+        background-color: #FFCC00; /* Amarelo UTFPR */
+        color: #000000;           /* Preto */
+    }
+    
+    /* SIDEBAR */
+    section[data-testid="stSidebar"] {
+        background-color: #191919; /* Cinza escuro */
+    }
+    section[data-testid="stSidebar"] p {
+        color: #FFFFFF;
+    }
+
+    /* BOTÕES */
+    .stButton>button {
+        background-color: #FFCC00;  /* Amarelo UTFPR */
+        color: black;
+        border-radius: 8px;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #e6bd19;  /* Amarelo dessaturado */
+        color: white;
+        transform: scale(1.03);
+    }
+
+    /* = CAIXAS DE CHAT  = */
+    /* Mensagem do Usuário */
+    div[data-testid="stChatMessage"][class*="user"] {
+        background-color: #191919;
+        border: 2px solid #000000;
+        border-radius: 15px;
+    }
+
+    /* Mensagem da UniA */
+    div[data-testid="stChatMessage"][class*="assistant"] {
+        background-color: #191919;
+        border-radius: 15px;
+        color: #000;
+        border-left: 5px solid #000000;
+    }
+
+    /*INPUT DO CHAT*/
+    div[data-baseweb="input"] {
+        border-radius: 10px;
+        border: 2px solid #FFCC00;
+        background-color: #191919;
+    }
+    div[data-baseweb="input"] input {
+        color: black;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # Configurações iniciais
-load_dotenv()
-st.set_page_config(page_title="UniA - Assistente Universitário", layout="wide")
-st.title("🎓 UniA - Seu Assistente Universitário")
 
 INDEX_PATH = "faiss/faissIndex"
 STORE_PATH = "faiss/faiss_store.pkl"
 DOCS_PATH = "contexDocs/*.pdf"
+
+
+load_dotenv()
+st.set_page_config(page_title="UniA - Assistente Universitário", layout="wide")
+st.title("🎓 UniA - Seu Assistente Universitário")
 
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -59,10 +142,6 @@ def reset_all():
 
 
 # Carregar e processar PDFs (Chunking)
-
-from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
 def clean_text(text: str) -> str:
     """
     Limpa o texto extraído do PDF, corrigindo quebras e espaços.
@@ -85,8 +164,8 @@ def load_pdfs():
     
     # Splitter baseado em sentenças/parágrafos
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,      # menor para melhorar granularidade
-        chunk_overlap=100,   # garante contexto entre chunks
+        chunk_size=700,      # menor para melhorar granularidade
+        chunk_overlap=120,   # garante contexto entre chunks
         separators=["\n\n", ".", "?", "!", "\n"]  # corta por parágrafo/frase
     )
 
@@ -187,7 +266,7 @@ if prompt:
 
     # Recuperação via FAISS
     query_vec = embedder.encode([prompt], convert_to_numpy=True)
-    D, I = index.search(query_vec, k=7) # Busca os 5 documentos mais similares  AUMENTAR MAIS O K
+    D, I = index.search(query_vec, k=7) # Busca os 7 documentos mais similares  AUMENTAR MAIS O K
     retrieved = [store["texts"][i] for i in I[0]]
     retrieved_meta = [store["metadata"][i] for i in I[0]]
 
@@ -206,7 +285,7 @@ if prompt:
         "1.  **PENSE ANTES DE RESPONDER:** Primeiro, avalie silenciosamente se a resposta para a 'Pergunta do Usuário' está contida no 'Contexto dos Documentos'.\n"
         "2.  **FONTE EXCLUSIVA:** Sua resposta deve ser baseada **única e exclusivamente** nas informações do 'Contexto dos Documentos'. NÃO use nenhum conhecimento prévio.\n"
         "3.  **RESPOSTA DIRETA:** Se a informação estiver no contexto, sintetize-a de forma clara e objetiva de fácil entendimento.\n"
-        "4.  **INFORMAÇÃO AUSENTE:** Se a resposta não puder ser encontrada de forma clara no contexto, responda **exatamente** com a frase: 'Desculpe, não encontrei essa informação nos documentos disponíveis.' Não tente adivinhar.\n"
+        "4.  **INFORMAÇÃO AUSENTE:** Se a resposta não puder ser encontrada de forma clara no contexto, responda com a frase: 'Desculpe, não encontrei essa informação nos documentos disponíveis.' Não tente adivinhar.\n"
         "5.  **LINGUAGEM:** Ao responder a 'Pergunta do Usuário', use **APENAS** português brasileiro.\n"
         "\n"
         "--- INÍCIO DOS DADOS ---\n"
@@ -224,8 +303,8 @@ if prompt:
         generation_kwargs = dict(
                                 inputs, 
                                 streamer=streamer, 
-                                max_new_tokens=1024, 
-                                temperature=0.2,
+                                max_new_tokens=512, 
+                                temperature=0.1,
                                 top_k=50,               # filtra tokens improváveis
                                 top_p=0.9,              # nucleus sampling
                                 repetition_penalty=1.2  # evita repetições literais
@@ -242,22 +321,9 @@ if prompt:
 
 
     # Mostrar fontes 
-    # with st.expander("📖 Fontes utilizadas para esta resposta"): 
-    #     for meta, snippet in zip(retrieved_meta, retrieved): 
-    #         st.markdown(f"**Fonte:** {meta['source']} (página {meta['page']})") 
-    #         st.caption(snippet[:400] + "...") 
-    #         st.markdown("---")
-    
-    # Mostrar fontes
-    with st.expander("📖 Fontes utilizadas para esta resposta"):
-        for meta, snippet in zip(retrieved_meta, retrieved):
-            st.markdown(f"**Fonte:** `{meta['source']}` (página {meta['page']})")
-
-            # Mostra apenas os 400 primeiros caracteres como resumo
-            st.caption(snippet[:400] + "...")
-
-            # Botão para expandir e ver o chunk completo
-            with st.expander("🔎 Ver fragmento completo do texto"):
-                st.write(snippet)
-
+    with st.expander("📖 Fontes utilizadas para esta resposta"): 
+        for meta, snippet in zip(retrieved_meta, retrieved): 
+            st.markdown(f"**Fonte:** {meta['source']} (página {meta['page']})") 
+            st.caption(snippet[:400] + "...") 
             st.markdown("---")
+
