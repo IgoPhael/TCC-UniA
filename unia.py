@@ -231,7 +231,7 @@ def load_llm():
     )
     model = AutoModelForCausalLM.from_pretrained(
         "meta-llama/Llama-3.2-1B-Instruct",
-        device_map="cpu",             # Força o modelo a carregar na CPU
+        device_map="cpu",             # Força uso da CPU
         offload_folder="offload",     # Pasta temporária para offload
         offload_state_dict=True,      # Ativa offload de estados
         token=HF_TOKEN
@@ -282,11 +282,12 @@ if prompt:
         "Você é a UniA, uma assistente de IA especialista nos documentos da universidade UTFPR. Sua única função é analisar o contexto fornecido e responder perguntas com base nele."
         "\n\n"
         "## REGRAS OBRIGATÓRIAS:\n"
-        "1.  **PENSE ANTES DE RESPONDER:** Primeiro, avalie silenciosamente se a resposta para a 'Pergunta do Usuário' está contida no 'Contexto dos Documentos'.\n"
-        "2.  **FONTE EXCLUSIVA:** Sua resposta deve ser baseada **única e exclusivamente** nas informações do 'Contexto dos Documentos'. NÃO use nenhum conhecimento prévio.\n"
-        "3.  **RESPOSTA DIRETA:** Se a informação estiver no contexto, sintetize-a de forma clara e objetiva de fácil entendimento.\n"
-        "4.  **INFORMAÇÃO AUSENTE:** Se a resposta não puder ser encontrada de forma clara no contexto, responda com a frase: 'Desculpe, não encontrei essa informação nos documentos disponíveis.' Não tente adivinhar.\n"
-        "5.  **LINGUAGEM:** Ao responder a 'Pergunta do Usuário', use **APENAS** português brasileiro.\n"
+        "1. **PENSE ANTES DE RESPONDER:** Primeiro, avalie silenciosamente se a resposta para a 'Pergunta do Usuário' está contida no 'Contexto dos Documentos'.\n"
+        "2. **FONTE EXCLUSIVA:** Sua resposta deve ser baseada **única e exclusivamente** nas informações do 'Contexto dos Documentos'. NÃO use nenhum conhecimento prévio.\n"
+        "3. **RESPOSTA DIRETA:** Se a informação estiver no contexto, escreve uma resposta direta de fácil entendimento.\n"
+        "4. **INFORMAÇÃO AUSENTE:** Se a resposta não puder ser encontrada de forma clara no contexto, responda com a frase: 'Desculpe, não encontrei essa informação nos documentos disponíveis.' Não tente adivinhar.\n"
+        "5. **LINGUAGEM:** Ao responder a Pergunta do Usuário, use **APENAS** português brasileiro.\n"
+        "6. **HISTÓRICO:** Considere o histórico recente da conversa para manter o contexto, mas não dependa dele para responder.\n"
         "\n"
         "--- INÍCIO DOS DADOS ---\n"
         f"## Histórico da Conversa Recente:\n{history_text}\n\n"
@@ -301,7 +302,7 @@ if prompt:
         streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
         inputs = tokenizer([system_prompt], return_tensors="pt").to(model.device)
         generation_kwargs = dict(
-                                inputs, 
+                                **inputs, 
                                 streamer=streamer, 
                                 max_new_tokens=512, 
                                 temperature=0.1,
@@ -326,4 +327,3 @@ if prompt:
             st.markdown(f"**Fonte:** {meta['source']} (página {meta['page']})") 
             st.caption(snippet[:400] + "...") 
             st.markdown("---")
-
