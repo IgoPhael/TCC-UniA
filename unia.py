@@ -164,9 +164,9 @@ def load_pdfs():
     
     # Splitter baseado em sentenças/parágrafos
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=700,      # menor para melhorar granularidade
-        chunk_overlap=120,   # garante contexto entre chunks
-        separators=["\n\n", ".", "?", "!", "\n"]  # corta por parágrafo/frase
+        chunk_size = 700,      # menor para melhorar granularidade
+        chunk_overlap = 100,   # garante contexto entre chunks
+        separators = ["\n\n", ".", ";", "\n"],  # corta por parágrafo/frase
     )
 
     for file in pdf_files:
@@ -219,7 +219,7 @@ def create_or_load_index():
 index, store, embedder = create_or_load_index()
 
 
-# Carregamento do modelo)
+# Carregamento do modelo
 @st.cache_resource
 def load_llm():
     """
@@ -306,7 +306,7 @@ if prompt:
                                 streamer=streamer, 
                                 max_new_tokens=512, 
                                 temperature=0.1,
-                                top_k=50,               # filtra tokens improváveis
+                                top_k=25,               # filtra tokens improváveis
                                 top_p=0.9,              # nucleus sampling
                                 repetition_penalty=1.2  # evita repetições literais
                             )
