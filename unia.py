@@ -141,7 +141,7 @@ def reset_all():
     st.rerun()
 
 
-# Carregar e processar PDFs (Chunking)
+
 def clean_text(text: str) -> str:
     """
     Limpa o texto extraído do PDF, corrigindo quebras e espaços.
@@ -154,11 +154,10 @@ def clean_text(text: str) -> str:
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
-
+# Carregar e processar PDFs (Chunking)
 def load_pdfs():
-    """
-    Carrega os PDFs, extrai o texto limpo e divide em chunks mais naturais.
-    """
+
+    # Carrega os PDFs, extrai o texto limpo e divide em chunks mais naturais.
     pdf_files = glob.glob(DOCS_PATH)
     docs = []
     
@@ -196,7 +195,7 @@ def create_or_load_index():
     with st.spinner("Primeira execução: Processando documentos e criando índice... Isso pode levar um momento. ⏳"):
         docs = load_pdfs()
         if not docs:
-            st.warning("Nenhum documento encontrado para indexar. Verifique a pasta 'contexDocs'.")
+            st.warning("Nenhum documento encontrado para indexar. A minha base contextual está vazia.")
             return None, None, embedder
             
         texts = [d[0] for d in docs]
@@ -222,9 +221,7 @@ index, store, embedder = create_or_load_index()
 # Carregamento do modelo
 @st.cache_resource
 def load_llm():
-    """
-    Carrega o modelo e o tokenizer para uso com streaming.
-    """
+    # Carrega o modelo e o tokenizer para uso com streaming.
     tokenizer = AutoTokenizer.from_pretrained(
         "meta-llama/Llama-3.2-1B-Instruct",
         token=HF_TOKEN
@@ -296,7 +293,7 @@ if prompt:
         f"## Pergunta do Usuário:\n{prompt}\n\n"
         "## Resposta da UniA (seguindo todas as regras):\n"
     )
-
+    
     # Lógica de geração com streaming
     with st.chat_message("assistant"):
         streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
